@@ -1,7 +1,7 @@
 import requests
 import json
 # import IPython; IPython.embed()
-
+url = "https://api.met.no/weatherapi/airqualityforecast/0.1/"
 class met:
 
    # special methods
@@ -68,18 +68,17 @@ class met:
     @staticmethod
     def parse(r):
         return r.json()
-    
+
     @staticmethod
-    def json_to_file(data, name="data.json", indent=2):
+    def json_to_file(data, name="data.json", indent=4):
         with open(name, "w+") as f: #writing json object
             json.dump(data, f, indent= indent)
 
+def update_stations_json(url):
+    tmp = met(url)
+    stations = tmp.stations
+    tmp.json_to_file(stations, "stations.json", indent=2)
 
 if __name__ == "__main__":
-    url = "https://api.met.no/weatherapi/airqualityforecast/0.1/"
-    args = {"lat": "60", "lon": "10", "areaclass": "grunnkrets", "station":None, "show":None, "filter_vars":None}
-    test = met(url)
-    test.get_data()
-    data = test.data
-    print(data.stations)
+    update_stations_json(url)
 
