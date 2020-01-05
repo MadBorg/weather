@@ -1,4 +1,4 @@
-DROP TABLE Station;
+DROP TABLE Station, Zone, Municipality, Area, Readings;
 
 CREATE TABLE Zone (
     name VARCHAR(255) PRIMARY KEY
