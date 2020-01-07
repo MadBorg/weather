@@ -2,17 +2,17 @@ import requests
 import pandas as pd
 import datetime
 import IPython as IP
+import psycopg2 as psql
 
 
 class air:
-    url = "https://api.nilu.no/"
+    url = "https://api.nilu.no//"
 
     def __init__(self):
         print(self.url)
-
-   # Get
-    def get_aq(self, params=None, utd=True, fromtime=None, totime=None, latitude=None, longitude=None, radius =None, station=None):
-        url = self.url + "aq/"
+  # private
+   # get
+    def _get_data(self, url, params, utd, fromtime, totime, latitude, longitude, radius , station):
        # asserts
         if radius:
             assert radius  <= 20 and radius > 0,  "Radius can at max be 20 km and at at least be more then 0, given radius is:" + radius
@@ -36,7 +36,6 @@ class air:
                      fromtime = datetime.datetime.strptime(fromtime, "%Y-%m-%d")
                 # IP.embed()
                 assert (totime - fromtime).days <= 30, "Date span must be under 30 days"
-
        # komponents
         if utd:
             url += "utd/"
@@ -47,16 +46,21 @@ class air:
             url += f"{latitude}/{longitude}/{radius}/"
         elif station:
             url += f"{station}/"
-        # IP.embed()
-       # -- 
+       # --
         r = requests.get(url, params=params)
         data = r.json()
         return data
 
-    def get_obs(self, params):
+  # public
+   # Get
+    def get_aq(self, params=None, utd=True, fromtime=None, totime=None, latitude=None, longitude=None, radius =None, station=None):
+        url = self.url + "aq/"
+        data = self._get_data(url, params, utd, fromtime, totime, latitude, longitude, radius, station)
+        return data
+
+    def get_obs(self, params=None, utd=True, fromtime=None, totime=None, latitude=None, longitude=None, radius =None, station=None):
         url = self.url + "obs/"
-        r = requests.get(url, params=params)
-        data = r.json()
+        data = self._get_data(url, params, utd, fromtime, totime, latitude, longitude, radius, station)
         return data
 
     def get_stats(self, params):
@@ -72,7 +76,7 @@ class air:
         return data
 
    # pandas refactoring
-
+    
    # database
    # show data
 
@@ -82,6 +86,6 @@ class air:
 
 if __name__ == "__main__":
     tmp = air()
-    # tmp.get_aq()
-    data = tmp.get_aq(utd=False, fromtime="2017-01-01", totime="2017-01-02", station="alnabru")
+    data = tmp.get_aq()
+    # data = tmp.get_aq(utd=False, fromtime="2019-01-01", totime="2019-01-03", station="alnabru")
     IP.embed()
