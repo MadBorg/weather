@@ -1,14 +1,17 @@
-DROP TABLE Station, Reading, Component;
+DROP TABLE IF EXISTS Station, Reading, Component;
 
 CREATE TABLE Station (
-    id SERIAL PRIMARY KEY,
-    eoi VARCHAR(7) NOT NULL,
+    id INTEGER PRIMARY KEY,
+    eoi VARCHAR(10) UNIQUE,
+    name VARCHAR(255) UNIQUE,
     latitude FLOAT(10),
     longitude FLOAT(10),
-    zone_name VARCHAR(255),
-    zone_municipality VARCHAR(255),
-    zone_area VARCHAR(255),
-    UNIQUE (eoi)
+    zone VARCHAR(255),
+    municipality VARCHAR(255),
+    area VARCHAR(255),
+    description text,
+    components text,
+    status text
 );
 
 CREATE TABLE Component (
@@ -19,7 +22,7 @@ CREATE TABLE Component (
 
 CREATE TABLE Reading(
     id SERIAL PRIMARY KEY,
-    eoi VARCHAR(7) NOT NULL REFERENCES Station(eoi),
+    eoi VARCHAR(10) NOT NULL REFERENCES Station(eoi),
     time_from TIME NOT NULL,
     time_to TIME NOT NULL,
     value FLOAT(12) NOT NULL,
