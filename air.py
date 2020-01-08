@@ -3,10 +3,12 @@ import pandas as pd
 import datetime
 import IPython as IP
 import psycopg2 as psql
+import re
+from pprint import pprint
 
 
 class air:
-    url = "https://api.nilu.no//"
+    url = "https://api.nilu.no/"
 
 
 
@@ -55,8 +57,8 @@ class air:
         return data
 
     def _establish_connection(self):
-        user = "db_air" # Sett inn ditt UiO-brukernavn ("_priv" blir lagt til under)
-        pwd = "password" # Sett inn passordet for _priv-brukeren du fikk i en mail
+        user = "db_air"
+        pwd = "password"
         db = "weather"
         port = "5432"
         host = "localhost"
@@ -69,7 +71,7 @@ class air:
 
         conn = psql.connect(connection)
 
-        self.conn = conn
+        # self.conn = conn
         return conn
 
   # public
@@ -96,10 +98,55 @@ class air:
         data = r.json()
         return data
 
+    def get_stations(self):
+        r = requests.get(self.url + "lookup/stations")
+        stations = r.json()
+        
+        self.stations = stations
+        return stations
    # pandas refactoring
     
    # database
-    
+    @property
+    def conn(self):
+        return self._establish_connection()
+
+    def obs_to_db(self):
+        pass
+
+    def obs_utd_to_db(self):
+        """
+            Gathering the up to date data, using osb_to_db.
+        """
+        pass
+
+    def update_stations_db(self):
+        stations = self.get_stations()
+
+        q = "INSERT INTO Station(id, eoi, name, latitude, longitude, zone, municipality, area, description, components, status) VALUES \n"
+        
+        for station in stations: # O(n)
+            if not (station["id"] is None or station["eoi"] is None):
+                q += f"({station['id']}, "  + \
+                    f"'{station['eoi']}', " + \
+                    f"'{station['station']}', " + \
+                    f"{station['latitude']}, " + \
+                    f"{station['longitude']}, " + \
+                    f"'{station['zone']}', " + \
+                    f"'{station['municipality']}', " + \
+                    f"'{station['area']}', " + \
+                    f"'{station['description']}', " + \
+                    f"'{station['components']}', " + \
+                    f"'{station['status']}'), \n" 
+        q = re.sub(", \n$", ";", q) # substituding then end lokking like <, > folowing the regexp ", $" with a ;  
+        with open("q.txt", "w+") as file:
+            file.write(q)
+
+        conn = self.conn
+        cur = conn.cursor()
+        cur.execute(q)
+        self.conn.commit()
+
    # show data
 
     def matrix_plot(self):
@@ -110,4 +157,5 @@ if __name__ == "__main__":
     tmp = air()
     data = tmp.get_aq()
     # data = tmp.get_aq(utd=False, fromtime="2019-01-01", totime="2019-01-03", station="alnabru")
+    tmp.update_stations_db()
     IP.embed()
