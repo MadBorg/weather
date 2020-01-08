@@ -8,8 +8,11 @@ import psycopg2 as psql
 class air:
     url = "https://api.nilu.no//"
 
+
+
     def __init__(self):
         print(self.url)
+        
   # private
    # get
     def _get_data(self, url, params, utd, fromtime, totime, latitude, longitude, radius , station):
@@ -51,6 +54,24 @@ class air:
         data = r.json()
         return data
 
+    def _establish_connection(self):
+        user = "db_air" # Sett inn ditt UiO-brukernavn ("_priv" blir lagt til under)
+        pwd = "password" # Sett inn passordet for _priv-brukeren du fikk i en mail
+        db = "weather"
+        port = "5432"
+        host = "localhost"
+        connection = \
+            f"dbname='" + db + "' " + \
+            f"user='{user}' " + \
+            f"port='{port}' " + \
+            f"host='{host}' " + \
+            f"password='{pwd}' "
+
+        conn = psql.connect(connection)
+
+        self.conn = conn
+        return conn
+
   # public
    # Get
     def get_aq(self, params=None, utd=True, fromtime=None, totime=None, latitude=None, longitude=None, radius =None, station=None):
@@ -78,6 +99,7 @@ class air:
    # pandas refactoring
     
    # database
+    
    # show data
 
     def matrix_plot(self):
