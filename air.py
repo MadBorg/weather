@@ -186,7 +186,8 @@ class air:
             INSERT INTO Reading (eoi, time_from, time_to, value, id_component)
             SELECT %s, %s, %s, %s, c.id
             FROM component AS c
-            WHERE c.component = %s;
+            WHERE c.component = %s
+            ON CONFLICT DO NOTHING;
             """
         for obs in obses:
             if not obs['eoi'] is None:
@@ -199,7 +200,10 @@ class air:
                 )
                 cur.execute(q, data)
         conn.commit()
-        cur.close()   
+        cur.close()
+    
+    # def build_backlog_obs(self):
+
 
    # show data
 
