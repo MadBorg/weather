@@ -261,7 +261,7 @@ class air:
                 
 
         
-    def build_backlog_obs(self, timedelta_days=20, dateTo=datetime.date(2019, 11, 1)):
+    def build_backlog_obs(self, timedelta_days=20, dateTo=datetime.date(2020, 1, 1)):
         today = datetime.date.today()
         timedelta = datetime.timedelta(days=timedelta_days)
         current_date = today
@@ -291,4 +291,4 @@ if __name__ == "__main__":
 
     tmp.build_backlog_obs()
 
-    IP.embed()
+    # IP.embed()
