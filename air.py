@@ -4,6 +4,7 @@ import datetime
 import IPython as IP
 import psycopg2 as psql
 import re
+import datetime
 from pprint import pprint
 
 
@@ -35,35 +36,35 @@ class air:
         return conn
 
    # get
-    def _get_data(self, url, params, utd, fromtime, totime, latitude, longitude, radius , station):
+    def _get_data(self, url, params, utd, fromTime, toTime, latitude, longitude, radius , station):
        # asserts
         if radius:
             assert radius  <= 20 and radius > 0,  "Radius can at max be 20 km and at at least be more then 0, given radius is:" + radius
 
         if not utd: #historical
-            # assert type(totime) is datetime.date or type(totime) is datetime.datetime
-            # assert type(fromtime) is datetime.date or type(fromtime) is datetime.datetime
+            # assert type(toTime) is datetime.date or type(toTime) is datetime.datetime
+            # assert type(fromTime) is datetime.date or type(fromTime) is datetime.datetime
 
             if radius and longitude and latitude:
                 pass
             if station:
                 pass
             else:
-                raise ValueError("If utd is false fromtime and totime must be specified, along with ether station or longitude, latitude and radius")
+                raise ValueError("If utd is false fromTime and toTime must be specified, along with ether station or longitude, latitude and radius")
 
-            if fromtime and totime:
+            if fromTime and toTime:
                 # TODO: add posibility for time aswell
-                if type(totime) is str:
-                    totime = datetime.datetime.strptime(totime, "%Y-%m-%d")
-                if type(fromtime) is str:
-                     fromtime = datetime.datetime.strptime(fromtime, "%Y-%m-%d")
+                if type(toTime) is str:
+                    toTime = datetime.datetime.strptime(toTime, "%Y-%m-%d")
+                if type(fromTime) is str:
+                     fromTime = datetime.datetime.strptime(fromTime, "%Y-%m-%d")
                 # IP.embed()
-                assert (totime - fromtime).days <= 30, "Date span must be under 30 days"
+                assert (toTime - fromTime).days <= 30, "Date span must be under 30 days"
        # komponents
         if utd:
             url += "utd/"
         else:
-            url += f"historical/{fromtime}/{totime}/"
+            url += f"historical/{fromTime}/{toTime}/"
 
         if latitude and longitude and radius:
             url += f"{latitude}/{longitude}/{radius}/"
@@ -76,14 +77,14 @@ class air:
 
   # public
    # Get
-    def get_aq(self, params=None, utd=True, fromtime=None, totime=None, latitude=None, longitude=None, radius =None, station=None):
+    def get_aq(self, params=None, utd=True, fromTime=None, toTime=None, latitude=None, longitude=None, radius =None, station=None):
         url = self.url + "aq/"
-        data = self._get_data(url, params, utd, fromtime, totime, latitude, longitude, radius, station)
+        data = self._get_data(url, params, utd, fromTime, toTime, latitude, longitude, radius, station)
         return data
 
-    def get_obs(self, params=None, utd=True, fromtime=None, totime=None, latitude=None, longitude=None, radius =None, station=None):
+    def get_obs(self, params=None, utd=True, fromTime=None, toTime=None, latitude=None, longitude=None, radius =None, station=None):
         url = self.url + "obs/"
-        data = self._get_data(url, params, utd, fromtime, totime, latitude, longitude, radius, station)
+        data = self._get_data(url, params, utd, fromTime, toTime, latitude, longitude, radius, station)
         return data
 
     def get_stats(self, params):
@@ -105,6 +106,24 @@ class air:
         self.stations = stations
         return stations
     
+    def get_obs_historical(self, fromTime, toTime, station=None,  latitude=None, longitude=None, radius=None):
+        # TODO: implement for station and area
+        print(f"     Getting data: {fromTime}, {toTime}")
+        conn = self.conn
+        cur = conn.cursor()
+
+        url = self.url + "/obs/historical/" + f"{fromTime}/{toTime}"
+        if station:
+            url += f"/{station}"
+        elif latitude and longitude and radius:
+            url += f"{latitude}/{longitude}/{radius}"
+        else:
+            raise ValueError("location or station must be given! (get_obs_historical)")
+        r = requests.get(url)
+        data = r.json()
+        print(f"     Done with data!")
+        return data
+
     def get_obs_utd(self):
         return self.get_obs()
 
@@ -119,6 +138,17 @@ class air:
     @property
     def conn(self):
         return self._establish_connection()
+
+    @property
+    def stations(self):
+        q = "SELECT name FROM Station;"
+        conn = self.conn
+        cur = conn.cursor()
+        cur.execute(q)
+        data = cur.fetchall()
+        cur.close()
+        conn.close()
+        return data
 
     def obs_to_db(self):
         pass
@@ -201,8 +231,45 @@ class air:
                 cur.execute(q, data)
         conn.commit()
         cur.close()
-    
-    # def build_backlog_obs(self):
+
+    def update_obs_historical(self, fromTime, toTime, station="all"):
+        obses = self.get_obs_historical(fromTime, toTime, station)
+        conn = self.conn
+        cur = conn.cursor()
+        q = """
+            INSERT INTO Reading (eoi, time_from, time_to, value, id_component)
+            SELECT %s, %s, %s, %s, c.id
+            FROM component AS c
+            WHERE c.component = %s
+            ON CONFLICT DO NOTHING;
+            """
+        # IP.embed()
+        for obs in obses:
+            if not obs['eoi'] == None:
+                values = obs['values']
+                for value in values:
+                    data = (
+                        obs['eoi'],
+                        value['fromTime'],
+                        value['toTime'],
+                        value['value'],
+                        obs['component'],
+                    )
+                    cur.execute(q, data)
+        conn.commit()
+        cur.close()
+                
+
+        
+    def build_backlog_obs(self, timedelta_days=20, dateTo=datetime.date(2019, 11, 1)):
+        today = datetime.date.today()
+        timedelta = datetime.timedelta(days=timedelta_days)
+        current_date = today
+        print(f"current_date: {current_date}")
+        while current_date > dateTo:
+            self.update_obs_historical(current_date-timedelta, current_date)
+            current_date = current_date - timedelta
+        
 
 
    # show data
@@ -214,6 +281,14 @@ class air:
 if __name__ == "__main__":
     tmp = air()
     # data = tmp.get_aq()
-    # data = tmp.get_aq(utd=False, fromtime="2019-01-01", totime="2019-01-03", station="alnabru")
+    # data = tmp.get_aq(utd=False, fromTime="2019-01-01", toTime="2019-01-03", station="alnabru")
     # tmp.update_stations_db()
+
+
+    # today = datetime.date.today()
+    # timedelta = datetime.timedelta(days=20)
+    # fromTime = today - timedelta
+
+    tmp.build_backlog_obs()
+
     IP.embed()
