@@ -74,9 +74,10 @@ def test_connection():
                 test_data (int)
                 {test_int[i][j]}
                 test_connection():Asserting data"""
-                
+
     # cleaning up
     q = "DROP TABLE test1, test2, test3;"
+    
     cur.execute(q)
     conn.commit()
     cur.close()

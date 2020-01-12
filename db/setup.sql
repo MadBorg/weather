@@ -16,17 +16,17 @@ CREATE TABLE Station (
 
 CREATE TABLE Component (
     id SERIAL PRIMARY KEY,
-    component VARCHAR(255) NOT NULL,
-    unit VARCHAR(255)
+    component VARCHAR(255) NOT NULL
+    -- unit VARCHAR(255)
 );
 
 CREATE TABLE Reading(
     id SERIAL PRIMARY KEY,
     eoi VARCHAR(10) NOT NULL REFERENCES Station(eoi),
-    time_from TIME NOT NULL,
-    time_to TIME NOT NULL,
+    time_from TIMESTAMP WITH TIME ZONE NOT NULL,
+    time_to TIMESTAMP WITH TIME ZONE NOT NULL,
     value FLOAT(12) NOT NULL,
-    index INTEGER,
+    -- index INTEGER,
     id_component INTEGER REFERENCES Component(id),
 
     UNIQUE (eoi, time_from, time_to, id_component)

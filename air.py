@@ -16,6 +16,24 @@ class air:
         print(self.url)
         
   # private
+    def _establish_connection(self):
+        user = "worker"
+        pwd = "sander"
+        db = "weather"
+        port = "5432"
+        host = "localhost"
+        connection = \
+            f"dbname='" + db + "' " + \
+            f"user='{user}' " + \
+            f"port='{port}' " + \
+            f"host='{host}' " + \
+            f"password='{pwd}' "
+
+        conn = psql.connect(connection)
+
+        # self.conn = conn
+        return conn
+
    # get
     def _get_data(self, url, params, utd, fromtime, totime, latitude, longitude, radius , station):
        # asserts
@@ -56,24 +74,6 @@ class air:
         data = r.json()
         return data
 
-    def _establish_connection(self):
-        user = "db_air"
-        pwd = "password"
-        db = "weather"
-        port = "5432"
-        host = "localhost"
-        connection = \
-            f"dbname='" + db + "' " + \
-            f"user='{user}' " + \
-            f"port='{port}' " + \
-            f"host='{host}' " + \
-            f"password='{pwd}' "
-
-        conn = psql.connect(connection)
-
-        # self.conn = conn
-        return conn
-
   # public
    # Get
     def get_aq(self, params=None, utd=True, fromtime=None, totime=None, latitude=None, longitude=None, radius =None, station=None):
@@ -104,6 +104,15 @@ class air:
         
         self.stations = stations
         return stations
+    
+    def get_obs_utd(self):
+        return self.get_obs()
+
+    def get_components(self):
+        r = requests.get(self.url + "lookup/components/")
+        data = r.json()
+        return data
+
    # pandas refactoring
     
    # database
@@ -114,38 +123,83 @@ class air:
     def obs_to_db(self):
         pass
 
-    def obs_utd_to_db(self):
+    def insert_obs_utd_to_db(self):
         """
             Gathering the up to date data, using osb_to_db.
         """
-        pass
 
-    def update_stations_db(self):
+
+    def update_stations(self):
         stations = self.get_stations()
-
-        q = "INSERT INTO Station(id, eoi, name, latitude, longitude, zone, municipality, area, description, components, status) VALUES \n"
-        
-        for station in stations: # O(n)
-            if not (station["id"] is None or station["eoi"] is None):
-                q += f"({station['id']}, "  + \
-                    f"'{station['eoi']}', " + \
-                    f"'{station['station']}', " + \
-                    f"{station['latitude']}, " + \
-                    f"{station['longitude']}, " + \
-                    f"'{station['zone']}', " + \
-                    f"'{station['municipality']}', " + \
-                    f"'{station['area']}', " + \
-                    f"'{station['description']}', " + \
-                    f"'{station['components']}', " + \
-                    f"'{station['status']}'), \n" 
-        q = re.sub(", \n$", ";", q) # substituding then end lokking like <, > folowing the regexp ", $" with a ;  
-        with open("q.txt", "w+") as file:
-            file.write(q)
-
         conn = self.conn
         cur = conn.cursor()
-        cur.execute(q)
-        self.conn.commit()
+
+        q = """INSERT INTO Station (id, eoi, name, latitude, longitude, zone, municipality, area, description, components, status)
+            VALUES
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;
+            """
+
+        for station in stations: # O(n)
+            if not (station["id"] is None or station["eoi"] is None):
+                data = (
+                    station['id'],
+                    station['eoi'],
+                    station['station'],
+                    station['latitude'],
+                    station['longitude'],
+                    station['zone'],
+                    station['municipality'],
+                    station['area'],
+                    station['description'],
+                    station['components'],
+                    station['status'],
+                )
+                
+                cur.execute(q, data)
+        conn.commit()
+        cur.close()
+        conn.close()
+
+    def update_components(self):
+        components = self.get_components()
+        conn = self.conn
+        cur = conn.cursor()
+        q = """
+            INSERT INTO Component (id, component)
+            VALUES
+                (DEFAULT, %s) ON CONFLICT DO NOTHING;
+            """
+        for component in components:
+            data = (
+                component["component"],
+                )
+            # print(f"data: {data}, type(data): {type(data)}")
+            cur.execute(q, data)
+        conn.commit()
+        cur.close()
+
+    def update_obs_utd(self):
+        obses = self.get_obs_utd()
+        conn = self.conn
+        cur = conn.cursor()
+        q = """
+            INSERT INTO Reading (eoi, time_from, time_to, value, id_component)
+            SELECT %s, %s, %s, %s, c.id
+            FROM component AS c
+            WHERE c.component = %s;
+            """
+        for obs in obses:
+            if not obs['eoi'] is None:
+                data = (
+                    obs['eoi'],
+                    obs['fromTime'],
+                    obs['toTime'],
+                    obs['value'],
+                    obs['component'],
+                )
+                cur.execute(q, data)
+        conn.commit()
+        cur.close()   
 
    # show data
 
@@ -155,7 +209,7 @@ class air:
 
 if __name__ == "__main__":
     tmp = air()
-    data = tmp.get_aq()
+    # data = tmp.get_aq()
     # data = tmp.get_aq(utd=False, fromtime="2019-01-01", totime="2019-01-03", station="alnabru")
-    tmp.update_stations_db()
+    # tmp.update_stations_db()
     IP.embed()
