@@ -7,11 +7,11 @@ import re
 import datetime
 from pprint import pprint
 
+import concurrent.futures
+
 
 class air:
     url = "https://api.nilu.no/"
-
-
 
     def __init__(self):
         print(self.url)
@@ -260,7 +260,7 @@ class air:
         cur.close()
                 
 
-        
+    
     def build_backlog_obs(self, timedelta_days=20, dateTo=datetime.date(2020, 1, 1)):
         today = datetime.date.today()
         timedelta = datetime.timedelta(days=timedelta_days)
@@ -277,9 +277,25 @@ class air:
     def matrix_plot(self):
         pass
 
+def fun(interval):
+    tmp = air()
+    tmp.update_obs_historical(interval[0], interval[1])
+
+def build_backlog_obs(timedelta=5, dateTo=datetime.date(2019, 1, 1)):
+    if type(timedelta) is int:
+        timedelta = datetime.timedelta(days=timedelta)
+
+    n = ((datetime.date.today() - dateTo) // timedelta)
+    # IP.embed()
+    intervals = [(dateTo-((i+1)*timedelta), dateTo-((i)*timedelta)) for i in range(n-1)]
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        executor.map(fun, intervals)
+
+
 
 if __name__ == "__main__":
-    tmp = air()
+    start = datetime.datetime.now()
+    # tmp = air()
     # data = tmp.get_aq()
     # data = tmp.get_aq(utd=False, fromTime="2019-01-01", toTime="2019-01-03", station="alnabru")
     # tmp.update_stations_db()
@@ -289,6 +305,9 @@ if __name__ == "__main__":
     # timedelta = datetime.timedelta(days=20)
     # fromTime = today - timedelta
 
-    tmp.build_backlog_obs()
+    # tmp.build_backlog_obs()
+
+    build_backlog_obs()
+    print(f"time: {(datetime.datetime.now() - start)}")
 
     # IP.embed()
