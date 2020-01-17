@@ -281,17 +281,24 @@ def fun(interval):
     tmp = air()
     tmp.update_obs_historical(interval[0], interval[1])
 
-def build_backlog_obs(timedelta=5, dateTo=datetime.date(2019, 1, 1)):
+
+def build_backlog_obs(timedelta=10, dateTo=datetime.date(2019, 1, 1)):
     if type(timedelta) is int:
         timedelta = datetime.timedelta(days=timedelta)
 
-    n = ((datetime.date.today() - dateTo) // timedelta)
+    today = datetime.date.today()
+    n = ((today - dateTo) // timedelta)
+    print(f"Number of intervalls: {n}")
     # IP.embed()
-    intervals = [(dateTo-((i+1)*timedelta), dateTo-((i)*timedelta)) for i in range(n-1)]
+
+    # TODO intervalls must start on today or the last day til today
+    intervals = [(today-((i+1)*timedelta), today-((i)*timedelta)) for i in range(n-1)]
+    print(f"The intervals: ")
+    # for intervall in intervals:
+    #     print(intervall)
+    
     with concurrent.futures.ProcessPoolExecutor() as executor:
         executor.map(fun, intervals)
-
-
 
 if __name__ == "__main__":
     start = datetime.datetime.now()
