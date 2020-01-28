@@ -164,13 +164,14 @@ class air:
         conn = self.conn
         cur = conn.cursor()
 
+        # TODO : Make it so that we can insert multiple values at once
         q = """INSERT INTO Station (id, eoi, name, latitude, longitude, zone, municipality, area, description, components, status)
             VALUES
                 (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;
             """
 
-        for station in stations: # O(n)
-            if not (station["id"] is None or station["eoi"] is None):
+        for station in stations:  # O(n)
+            if not (station["id"] is None or station["eoi"] is None):  # TODO : Remove if inside the loop
                 data = (
                     station['id'],
                     station['eoi'],
